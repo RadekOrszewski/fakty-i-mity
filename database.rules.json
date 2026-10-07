@@ -1,0 +1,21 @@
+{
+  "rules": {
+    "rooms": {
+      ".read": "auth != null",
+      ".indexOn": ["createdAt"],
+      "$room": {
+        ".write": "auth != null && ((!data.exists() && newData.child('hostUid').val() === auth.uid) || (data.exists() && data.child('hostUid').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('createdAt').val() < now - 86400000))",
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "teams": {
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid && (root.child('rooms/' + $room + '/phase').val() === 'lobby' || (root.child('rooms/' + $room + '/phase').val() === 'answering' && now < root.child('rooms/' + $room + '/phaseEndsAt').val() + 3000))",
+            ".validate": "newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 30",
+            "answers": {
+              "$sid": { ".validate": "newData.isBoolean()" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
