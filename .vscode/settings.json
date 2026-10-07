@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^node -e \"const fs=require\\('fs'\\); const source=fs\\.readFileSync\\('C:\\\\\\\\Users\\\\\\\\rados\\\\\\\\fakty-i-mity\\\\\\\\js\\\\\\\\config\\.js','utf8'\\)\\.replaceAll\\('export const ','const '\\); new Function\\(source\\); console\\.log\\(source\\.includes\\('databaseURL:'\\) \\? 'JavaScript syntax OK; databaseURL present\\.' : 'JavaScript syntax OK; databaseURL is missing\\.'\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

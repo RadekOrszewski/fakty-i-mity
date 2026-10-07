@@ -12,17 +12,15 @@
 //
 //  Tryb demo można wymusić zawsze, dopisując ?demo=1 do adresu.
 
-export const FIREBASE_CONFIG = null;
-
-/*
 export const FIREBASE_CONFIG = {
-  apiKey: "...",
-  authDomain: "twoj-projekt.firebaseapp.com",
-  databaseURL: "https://twoj-projekt-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "twoj-projekt",
-  appId: "...",
+  apiKey: "AIzaSyC7_k-RuCCW1GDJD4tIb7SYIIvS8WSiIzk",
+  authDomain: "kanban-facts-myths.firebaseapp.com",
+  databaseURL: "https://kanban-facts-myths-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "kanban-facts-myths",
+  storageBucket: "kanban-facts-myths.firebasestorage.app",
+  messagingSenderId: "1041419540535",
+  appId: "1:1041419540535:web:f93b2eb8e14d9cb920c7b2"
 };
-*/
 
 // Domyślny czas na ustalenie odpowiedzi (sekundy). Prowadzący może go zmienić w lobby.
 export const DEFAULT_DURATION = 300;
