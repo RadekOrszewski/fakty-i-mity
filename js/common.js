@@ -59,4 +59,36 @@ export function demoBadge() {
   (document.querySelector('.brand-bar') || document.body).append(b);
 }
 
+// Tłumaczy typowe błędy Firebase na konkretną wskazówkę, co poprawić.
+export function explainError(e) {
+  const raw = String(e?.code || '') + ' ' + String(e?.message || e || '');
+  const r = raw.toLowerCase();
+  let hint = 'Nieznany błąd. Otwórz konsolę przeglądarki (F12 → Console), tam są szczegóły.';
+  if (r.includes('permission_denied') || r.includes('permission denied'))
+    hint = 'Baza odrzuca dostęp. W Firebase: Realtime Database → Rules → wklej całą zawartość pliku database.rules.json i kliknij Publish.';
+  else if (r.includes('admin-restricted-operation') || r.includes('operation-not-allowed'))
+    hint = 'Logowanie anonimowe jest wyłączone. W Firebase: Authentication → Sign-in method → Anonymous → Enable.';
+  else if (r.includes('unauthorized-domain') || r.includes('requests-from-referer'))
+    hint = 'Domena strony nie jest dozwolona. W Firebase: Authentication → Settings → Authorized domains → dodaj radekorszewski.github.io (bez https i bez ścieżki).';
+  else if (r.includes('api-key-not-valid') || r.includes('invalid-api-key'))
+    hint = 'Nieprawidłowy apiKey w js/config.js. Skopiuj konfigurację ponownie z Project settings.';
+  else if (r.includes('timeout'))
+    hint = 'Brak odpowiedzi z bazy. Sprawdź, czy databaseURL w js/config.js jest dokładnie taki jak adres na ekranie Realtime Database, i czy baza została utworzona.';
+  else if (r.includes('failed to fetch') || r.includes('importing a module') || r.includes('network'))
+    hint = 'Nie udało się pobrać bibliotek Firebase. Sprawdź połączenie z internetem lub blokery treści.';
+  return { hint, raw: raw.trim() };
+}
+
+export function showFatal(el, e) {
+  console.error(e);
+  const { hint, raw } = explainError(e);
+  el.innerHTML = `<div class="center-msg fatal">
+    <div class="eyebrow">Problem z połączeniem</div>
+    <h1>Nie udało się przygotować gry</h1>
+    <p class="lead">${esc(hint)}</p>
+    <p class="muted small mono">${esc(raw)}</p>
+    <button class="btn ghost" onclick="location.reload()">Spróbuj ponownie</button>
+  </div>`;
+}
+
 export const WINNERS_MSG = 'Wszyscy jesteście zwycięzcami, bo czegoś się nauczyliście!';

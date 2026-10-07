@@ -1,7 +1,7 @@
 import { createStore, isDemo } from './store.js';
 import { STATEMENTS, QUIZ_TITLE } from './statements.js';
 import { DEFAULT_DURATION, REVEAL_IN_TWO_STEPS, ROOM_TTL_HOURS } from './config.js';
-import { $, $$, esc, md, fmt, label, teamsOf, answeredCount, ranking, toast, demoBadge, WINNERS_MSG } from './common.js';
+import { $, $$, esc, md, fmt, label, teamsOf, answeredCount, ranking, toast, demoBadge, showFatal, WINNERS_MSG } from './common.js';
 
 const app = $('#app');
 const ANSWERS = Object.fromEntries(STATEMENTS.map((s) => [s.id, s.answer]));
@@ -16,22 +16,20 @@ init();
 async function init() {
   try {
     store = await createStore();
+    if (isDemo) demoBadge();
+    await store.cleanup(ROOM_TTL_HOURS * 3600e3);
+
+    // Odświeżenie strony prowadzącego wraca do tego samego pokoju.
+    code = sessionStorage.getItem('ksdquiz:hostRoom');
+    const existing = code ? await store.get(code) : null;
+    if (!existing || existing.hostUid !== store.uid) code = await newRoom();
+
+    store.subscribe(code, (r) => { room = r; render(); }, (e) => showFatal(app, e));
+    setInterval(onTick, 250);
+    addEventListener('keydown', onKey);
   } catch (e) {
-    console.error(e);
-    app.innerHTML = `<div class="center-msg"><h1>Nie udało się połączyć z bazą</h1><p>Sprawdź konfigurację w <code>js/config.js</code> i czy logowanie anonimowe jest włączone. Szczegóły w konsoli przeglądarki.</p></div>`;
-    return;
+    showFatal(app, e);
   }
-  if (isDemo) demoBadge();
-  await store.cleanup(ROOM_TTL_HOURS * 3600e3);
-
-  // Odświeżenie strony prowadzącego wraca do tego samego pokoju.
-  code = sessionStorage.getItem('ksdquiz:hostRoom');
-  const existing = code ? await store.get(code) : null;
-  if (!existing || existing.hostUid !== store.uid) code = await newRoom();
-
-  store.subscribe(code, (r) => { room = r; render(); });
-  setInterval(onTick, 250);
-  addEventListener('keydown', onKey);
 }
 
 async function newRoom() {

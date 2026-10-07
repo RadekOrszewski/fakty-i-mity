@@ -1,5 +1,5 @@
 import { createStore, isDemo } from './store.js';
-import { $, $$, esc, md, fmt, label, teamsOf, statementsOf, answeredCount, ranking, toast, demoBadge, WINNERS_MSG } from './common.js';
+import { $, $$, esc, md, fmt, label, teamsOf, statementsOf, answeredCount, ranking, toast, demoBadge, showFatal, WINNERS_MSG } from './common.js';
 
 const app = $('#app');
 const params = new URLSearchParams(location.search);
@@ -14,15 +14,14 @@ async function init() {
   if (!code) return renderCodeForm();
   try {
     store = await createStore();
+    if (isDemo) demoBadge();
+    const first = await store.get(code);
+    if (!first) return msg('Nie ma takiego pokoju', `Sprawdźcie kod <b class="mono">${esc(code)}</b> na ekranie prowadzącego.`, true);
+    store.subscribe(code, (r) => { room = r; render(); }, (e) => showFatal(app, e));
+    setInterval(onTick, 250);
   } catch (e) {
-    console.error(e);
-    return msg('Brak połączenia', 'Nie udało się połączyć z grą. Sprawdźcie internet i odświeżcie stronę.');
+    showFatal(app, e);
   }
-  if (isDemo) demoBadge();
-  const first = await store.get(code);
-  if (!first) return msg('Nie ma takiego pokoju', `Sprawdźcie kod <b class="mono">${esc(code)}</b> na ekranie prowadzącego.`, true);
-  store.subscribe(code, (r) => { room = r; render(); });
-  setInterval(onTick, 250);
 }
 
 const set = (patch) => store.update(code, patch).catch((e) => {

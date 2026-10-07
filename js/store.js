@@ -74,6 +74,14 @@ function demoStore() {
   };
 }
 
+function withTimeout(p, ms, what) {
+  let t;
+  return Promise.race([
+    p.finally(() => clearTimeout(t)),
+    new Promise((_, rej) => { t = setTimeout(() => rej(new Error(`timeout: ${what} (${ms / 1000}s)`)), ms); }),
+  ]);
+}
+
 async function firebaseStore() {
   const base = 'https://www.gstatic.com/firebasejs/10.14.1/';
   const [{ initializeApp }, A, D] = await Promise.all([
@@ -86,8 +94,8 @@ async function firebaseStore() {
   // Sesja per karta: odświeżenie strony zachowuje tożsamość drużyny,
   // a dwie karty w jednej przeglądarce to dwie różne drużyny.
   await A.setPersistence(auth, A.browserSessionPersistence);
-  await auth.authStateReady();
-  if (!auth.currentUser) await A.signInAnonymously(auth);
+  await withTimeout(auth.authStateReady(), 15000, 'auth');
+  if (!auth.currentUser) await withTimeout(A.signInAnonymously(auth), 15000, 'logowanie anonimowe');
 
   const db = D.getDatabase(app);
   let off = 0;
@@ -98,15 +106,15 @@ async function firebaseStore() {
     mode: 'firebase',
     uid: auth.currentUser.uid,
     offset: () => off,
-    async get(c) { return (await D.get(r(c))).val(); },
-    create: (c, d) => D.set(r(c), d),
+    async get(c) { return (await withTimeout(D.get(r(c)), 12000, 'odczyt z bazy')).val(); },
+    create: (c, d) => withTimeout(D.set(r(c), d), 12000, 'zapis do bazy'),
     update: (c, p) => D.update(r(c), p),
     remove: (c) => D.remove(r(c)),
-    subscribe(c, f) { return D.onValue(r(c), (s) => f(s.val())); },
+    subscribe(c, f, onErr) { return D.onValue(r(c), (s) => f(s.val()), (e) => onErr?.(e)); },
     async cleanup(ttl) {
       try {
         const q = D.query(D.ref(db, 'rooms'), D.orderByChild('createdAt'), D.endAt(Date.now() + off - ttl));
-        const snap = await D.get(q);
+        const snap = await withTimeout(D.get(q), 8000, 'sprzątanie');
         const jobs = [];
         snap.forEach((ch) => { jobs.push(D.remove(ch.ref)); });
         await Promise.allSettled(jobs);
