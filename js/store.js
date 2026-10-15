@@ -50,7 +50,7 @@ function demoStore() {
     async create(c, data) { localStorage.setItem(P + c, JSON.stringify(data)); emit(c); },
     async update(c, patch) {
       const r = read(c);
-      if (!r) throw new Error('Pokój nie istnieje');
+      if (!r) throw new Error('Room does not exist');
       for (const [p, v] of Object.entries(patch)) setPath(r, p, v);
       localStorage.setItem(P + c, JSON.stringify(r));
       emit(c);
@@ -95,7 +95,7 @@ async function firebaseStore() {
   // a dwie karty w jednej przeglądarce to dwóch różnych graczy.
   await A.setPersistence(auth, A.browserSessionPersistence);
   await withTimeout(auth.authStateReady(), 15000, 'auth');
-  if (!auth.currentUser) await withTimeout(A.signInAnonymously(auth), 15000, 'logowanie anonimowe');
+  if (!auth.currentUser) await withTimeout(A.signInAnonymously(auth), 15000, 'anonymous sign-in');
 
   const db = D.getDatabase(app);
   let off = 0;
@@ -106,19 +106,19 @@ async function firebaseStore() {
     mode: 'firebase',
     uid: auth.currentUser.uid,
     offset: () => off,
-    async get(c) { return (await withTimeout(D.get(r(c)), 12000, 'odczyt z bazy')).val(); },
-    create: (c, d) => withTimeout(D.set(r(c), d), 12000, 'zapis do bazy'),
+    async get(c) { return (await withTimeout(D.get(r(c)), 12000, 'database read')).val(); },
+    create: (c, d) => withTimeout(D.set(r(c), d), 12000, 'database write'),
     update: (c, p) => D.update(r(c), p),
     remove: (c) => D.remove(r(c)),
     subscribe(c, f, onErr) { return D.onValue(r(c), (s) => f(s.val()), (e) => onErr?.(e)); },
     async cleanup(ttl) {
       try {
         const q = D.query(D.ref(db, 'rooms'), D.orderByChild('createdAt'), D.endAt(Date.now() + off - ttl));
-        const snap = await withTimeout(D.get(q), 8000, 'sprzątanie');
+        const snap = await withTimeout(D.get(q), 8000, 'cleanup');
         const jobs = [];
         snap.forEach((ch) => { jobs.push(D.remove(ch.ref)); });
         await Promise.allSettled(jobs);
-      } catch (e) { console.warn('Sprzątanie starych pokojów nie powiodło się', e); }
+      } catch (e) { console.warn('Cleaning up old rooms failed', e); }
     },
   };
 }

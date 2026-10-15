@@ -16,7 +16,7 @@ async function init() {
     store = await createStore();
     if (isDemo) demoBadge();
     const first = await store.get(code);
-    if (!first) return msg('Nie ma takiego pokoju', `Sprawdź kod <b class="mono">${esc(code)}</b> na ekranie prowadzącego.`, true);
+    if (!first) return msg('Room not found', `Check the code <b class="mono">${esc(code)}</b> on the host screen.`, true);
     store.subscribe(code, (r) => { room = r; render(); }, (e) => showFatal(app, e));
     setInterval(onTick, 250);
   } catch (e) {
@@ -26,13 +26,13 @@ async function init() {
 
 const set = (patch) => store.update(code, patch).catch((e) => {
   console.error(e);
-  toast('Nie udało się zapisać. Możliwe, że czas już minął.');
+  toast('Could not save. Time may already be up.');
 });
 
 // ── Render ──────────────────────────────────────────────────
 
 function render() {
-  if (!room) { mounted = null; return msg('Sesja zakończona', 'Dzięki za udział! Możesz zamknąć tę stronę.'); }
+  if (!room) { mounted = null; return msg('Session ended', 'Thanks for playing! You can close this page.'); }
   me = room.players?.[store.uid] ? { id: store.uid, ...room.players[store.uid], answers: room.players[store.uid].answers || {} } : null;
 
   let view;
@@ -49,13 +49,13 @@ const VIEWS = {
       app.innerHTML = `
         <div class="phone">
           <div class="eyebrow">${esc(room.title)}</div>
-          <h1>Jak masz na imię?</h1>
+          <h1>What’s your name?</h1>
           <form id="join" class="join-form" autocomplete="off">
-            <label for="name" class="sr-only">Imię lub pseudonim</label>
-            <input id="name" maxlength="30" placeholder="np. Ania" required>
-            <button class="btn primary big" type="submit">Dołączam</button>
+            <label for="name" class="sr-only">Name or nickname</label>
+            <input id="name" maxlength="30" placeholder="e.g. Alex" required>
+            <button class="btn primary big" type="submit">Join</button>
           </form>
-          <p class="muted small">Każdy gra na swoim telefonie i odpowiada samodzielnie.</p>
+          <p class="muted small">Everyone plays on their own phone and answers on their own.</p>
         </div>`;
       $('#name').focus();
       $('#join').onsubmit = async (e) => {
@@ -63,25 +63,25 @@ const VIEWS = {
         const name = $('#name').value.trim().replace(/\s+/g, ' ');
         if (!name) return;
         const taken = playersOf(room).some((t) => t.name.toLowerCase() === name.toLowerCase());
-        if (taken) return toast('Ta nazwa jest już zajęta. Wybierz inną!');
+        if (taken) return toast('That name is already taken. Pick another one!');
         await set({ ['players/' + store.uid]: { name, joinedAt: now(), submitted: false } });
       };
     },
   },
 
   late: {
-    mount() { msg('Gra już trwa', 'Odpowiedzi zostały zamknięte. Śledź wyniki na ekranie prowadzącego.'); },
+    mount() { msg('Game in progress', 'Answers are closed. Follow the results on the host screen.'); },
   },
 
   lobby: {
     mount() {
       app.innerHTML = `
         <div class="phone">
-          <div class="eyebrow">Jesteś w grze</div>
+          <div class="eyebrow">You’re in the game</div>
           <h1 class="player-title">${esc(me.name)}</h1>
-          <p class="lead">Czekamy, aż prowadzący wystartuje quiz.</p>
+          <p class="lead">Waiting for the host to start the quiz.</p>
           <div class="pulse" aria-hidden="true"></div>
-          <h2 class="small-h">Gracze w pokoju</h2>
+          <h2 class="small-h">Players in the room</h2>
           <ul id="players" class="player-chips small"></ul>
         </div>`;
     },
@@ -110,17 +110,17 @@ const VIEWS = {
               <li class="card" data-id="${esc(s.id)}">
                 <div class="card-n mono">${i + 1}</div>
                 <p class="card-text">${md(s.text)}</p>
-                <div class="tf" role="group" aria-label="Odpowiedź na stwierdzenie ${i + 1}">
-                  <button type="button" class="tf-btn t" data-v="1" aria-pressed="false">Prawda</button>
-                  <button type="button" class="tf-btn f" data-v="0" aria-pressed="false">Fałsz</button>
+                <div class="tf" role="group" aria-label="Answer to statement ${i + 1}">
+                  <button type="button" class="tf-btn t" data-v="1" aria-pressed="false">True</button>
+                  <button type="button" class="tf-btn f" data-v="0" aria-pressed="false">False</button>
                 </div>
               </li>`).join('')}
           </ol>
           <div class="submit-bar">
-            <button id="submit" class="btn primary big wide">Wysyłam odpowiedzi</button>
+            <button id="submit" class="btn primary big wide">Submit answers</button>
             <div id="sent" class="sent" hidden>
-              <b>✓ Odpowiedzi wysłane</b>
-              <button id="edit" class="btn ghost">Poprawiam</button>
+              <b>✓ Answers submitted</b>
+              <button id="edit" class="btn ghost">Edit answers</button>
             </div>
           </div>
         </div>`;
@@ -134,7 +134,7 @@ const VIEWS = {
       });
       $('#submit').onclick = () => {
         const missing = st.length - answeredCount({ answers: local }, st);
-        if (missing && !confirm(`Brakuje ${missing} odp. Nieoznaczone liczą się jako błędne. Wysłać mimo to?`)) return;
+        if (missing && !confirm(`${missing} unanswered. Unanswered statements count as wrong. Submit anyway?`)) return;
         set({ [`players/${store.uid}/submitted`]: true });
       };
       $('#edit').onclick = () => set({ [`players/${store.uid}/submitted`]: false });
@@ -150,7 +150,7 @@ const VIEWS = {
   closed: {
     mount() {
       const st = statementsOf(room);
-      msg('Odpowiedzi zamknięte', `Zaznaczone odpowiedzi: ${answeredCount(me, st)} z ${st.length}. Patrz na ekran prowadzącego!`);
+      msg('Answers closed', `You answered ${answeredCount(me, st)} of ${st.length}. Watch the host screen!`);
     },
   },
 
@@ -166,14 +166,14 @@ const VIEWS = {
       const revealedSoFar = Object.keys(room.key || {}).length;
       app.innerHTML = `
         <div class="phone">
-          <div class="eyebrow">Stwierdzenie ${i + 1} z ${st.length}</div>
+          <div class="eyebrow">Statement ${i + 1} of ${st.length}</div>
           <p class="statement-sm">${md(s.text)}</p>
-          <div class="my-answer">Twoja odpowiedź: <b>${label(mine)}</b></div>
+          <div class="my-answer">Your answer: <b>${label(mine)}</b></div>
           ${shown
-            ? `<div class="verdict-sm ${mine === correct ? 'ok' : 'bad'}">${mine === correct ? '✓ Dobrze!' : '✗ Niestety'}</div>
-               <p class="muted">Poprawna odpowiedź: <b>${label(correct)}</b></p>`
-            : '<div class="verdict-sm pending">Czekamy na rozstrzygnięcie…</div>'}
-          <p class="score-line mono">Punkty: ${score}/${revealedSoFar}</p>
+            ? `<div class="verdict-sm ${mine === correct ? 'ok' : 'bad'}">${mine === correct ? '✓ Correct!' : '✗ Not quite'}</div>
+               <p class="muted">Correct answer: <b>${label(correct)}</b></p>`
+            : '<div class="verdict-sm pending">Waiting for the answer…</div>'}
+          <p class="score-line mono">Score: ${score}/${revealedSoFar}</p>
         </div>`;
     },
   },
@@ -185,10 +185,10 @@ const VIEWS = {
       const mine = rows.find((r) => r.id === me.id);
       app.innerHTML = `
         <div class="phone">
-          <div class="eyebrow">Koniec gry</div>
+          <div class="eyebrow">Game over</div>
           <h1 class="player-title">${esc(me.name)}</h1>
-          <div class="big-place"><span class="mono">${mine.place}.</span> miejsce</div>
-          <p class="score-line mono">${mine.score}/${st.length} poprawnych</p>
+          <div class="big-place"><span class="mono">${ordinal(mine.place)}</span> place</div>
+          <p class="score-line mono">${mine.score}/${st.length} correct</p>
           <div class="winners">${esc(WINNERS_MSG)}</div>
         </div>`;
     },
@@ -205,7 +205,7 @@ function paintCards() {
   const st = statementsOf(room);
   const n = answeredCount({ answers: local }, st);
   const c = $('#pcount');
-  if (c) c.textContent = `Zaznaczone: ${n}/${st.length}`;
+  if (c) c.textContent = `Answered: ${n}/${st.length}`;
   const locked = !!me.submitted || timeUp();
   $('.answering-phone')?.classList.toggle('locked', locked);
   const sub = $('#submit'), sent = $('#sent');
@@ -228,19 +228,19 @@ function msg(title, body, retry = false) {
     <div class="phone center">
       <h1>${title}</h1>
       <p class="lead">${body}</p>
-      ${retry ? '<a class="btn ghost" href="play.html">Wpisz inny kod</a>' : ''}
+      ${retry ? '<a class="btn ghost" href="play.html">Enter a different code</a>' : ''}
     </div>`;
 }
 
 function renderCodeForm() {
   app.innerHTML = `
     <div class="phone center">
-      <div class="eyebrow">Quiz indywidualny</div>
-      <h1>Wpisz kod pokoju</h1>
+      <div class="eyebrow">Individual quiz</div>
+      <h1>Enter the room code</h1>
       <form id="cf" class="join-form" autocomplete="off">
-        <label for="c" class="sr-only">Kod pokoju</label>
+        <label for="c" class="sr-only">Room code</label>
         <input id="c" class="mono code-input" maxlength="4" placeholder="ABCD" required>
-        <button class="btn primary big" type="submit">Dalej</button>
+        <button class="btn primary big" type="submit">Next</button>
       </form>
     </div>`;
   $('#cf').onsubmit = (e) => {
@@ -249,4 +249,10 @@ function renderCodeForm() {
     p.set('room', $('#c').value.trim().toUpperCase());
     location.search = p.toString();
   };
+}
+
+function ordinal(n) {
+  const t = n % 100;
+  const suffix = t >= 11 && t <= 13 ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th';
+  return n + suffix;
 }

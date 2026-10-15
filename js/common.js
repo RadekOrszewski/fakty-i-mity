@@ -15,7 +15,7 @@ export function fmt(ms) {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
-export const label = (v) => (v === true ? 'Prawda' : v === false ? 'Fałsz' : '—');
+export const label = (v) => (v === true ? 'True' : v === false ? 'False' : '—');
 
 export function playersOf(room) {
   return Object.entries(room?.players || {})
@@ -55,7 +55,7 @@ export function toast(msg) {
 export function demoBadge() {
   const b = document.createElement('div');
   b.className = 'demo-badge';
-  b.innerHTML = '<b>Tryb demo</b><span> · dane tylko w tej przeglądarce</span>';
+  b.innerHTML = '<b>Demo mode</b><span> · data stays in this browser only</span>';
   (document.querySelector('.brand-bar') || document.body).append(b);
 }
 
@@ -63,19 +63,19 @@ export function demoBadge() {
 export function explainError(e) {
   const raw = String(e?.code || '') + ' ' + String(e?.message || e || '');
   const r = raw.toLowerCase();
-  let hint = 'Nieznany błąd. Otwórz konsolę przeglądarki (F12 → Console), tam są szczegóły.';
+  let hint = 'Unknown error. Open the browser console (F12 → Console) for details.';
   if (r.includes('permission_denied') || r.includes('permission denied'))
-    hint = 'Baza odrzuca dostęp. W Firebase: Realtime Database → Rules → wklej całą zawartość pliku database.rules.json i kliknij Publish.';
+    hint = 'The database is denying access. In Firebase: Realtime Database → Rules → paste the full contents of database.rules.json and click Publish.';
   else if (r.includes('admin-restricted-operation') || r.includes('operation-not-allowed'))
-    hint = 'Logowanie anonimowe jest wyłączone. W Firebase: Authentication → Sign-in method → Anonymous → Enable.';
+    hint = 'Anonymous sign-in is disabled. In Firebase: Authentication → Sign-in method → Anonymous → Enable.';
   else if (r.includes('unauthorized-domain') || r.includes('requests-from-referer'))
-    hint = 'Domena strony nie jest dozwolona. W Firebase: Authentication → Settings → Authorized domains → dodaj radekorszewski.github.io (bez https i bez ścieżki).';
+    hint = 'This domain is not allowed. In Firebase: Authentication → Settings → Authorized domains → add radekorszewski.github.io (no https, no path).';
   else if (r.includes('api-key-not-valid') || r.includes('invalid-api-key'))
-    hint = 'Nieprawidłowy apiKey w js/config.js. Skopiuj konfigurację ponownie z Project settings.';
+    hint = 'Invalid apiKey in js/config.js. Copy the config again from Project settings.';
   else if (r.includes('timeout'))
-    hint = 'Brak odpowiedzi z bazy. Sprawdź, czy databaseURL w js/config.js jest dokładnie taki jak adres na ekranie Realtime Database, i czy baza została utworzona.';
+    hint = 'No response from the database. Check that databaseURL in js/config.js exactly matches the address shown on the Realtime Database screen, and that the database has been created.';
   else if (r.includes('failed to fetch') || r.includes('importing a module') || r.includes('network'))
-    hint = 'Nie udało się pobrać bibliotek Firebase. Sprawdź połączenie z internetem lub blokery treści.';
+    hint = 'Could not load the Firebase libraries. Check your internet connection or content blockers.';
   return { hint, raw: raw.trim() };
 }
 
@@ -83,12 +83,12 @@ export function showFatal(el, e) {
   console.error(e);
   const { hint, raw } = explainError(e);
   el.innerHTML = `<div class="center-msg fatal">
-    <div class="eyebrow">Problem z połączeniem</div>
-    <h1>Nie udało się przygotować gry</h1>
+    <div class="eyebrow">Connection problem</div>
+    <h1>Could not set up the game</h1>
     <p class="lead">${esc(hint)}</p>
     <p class="muted small mono">${esc(raw)}</p>
-    <button class="btn ghost" onclick="location.reload()">Spróbuj ponownie</button>
+    <button class="btn ghost" onclick="location.reload()">Try again</button>
   </div>`;
 }
 
-export const WINNERS_MSG = 'Wszyscy jesteście zwycięzcami, bo czegoś się nauczyliście!';
+export const WINNERS_MSG = 'You are all winners, because you all learned something!';
