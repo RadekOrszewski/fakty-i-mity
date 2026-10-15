@@ -1,7 +1,7 @@
 import { createStore, isDemo } from './store.js';
 import { STATEMENTS, QUIZ_TITLE } from './statements.js';
 import { DEFAULT_DURATION, REVEAL_IN_TWO_STEPS, ROOM_TTL_HOURS } from './config.js';
-import { $, $$, esc, md, fmt, label, teamsOf, answeredCount, ranking, toast, demoBadge, showFatal, WINNERS_MSG } from './common.js';
+import { $, $$, esc, md, fmt, label, playersOf, answeredCount, ranking, toast, demoBadge, showFatal, WINNERS_MSG } from './common.js';
 
 const app = $('#app');
 const ANSWERS = Object.fromEntries(STATEMENTS.map((s) => [s.id, s.answer]));
@@ -81,11 +81,11 @@ const VIEWS = {
             <div class="room-code"><span>kod pokoju</span><b class="mono">${code}</b></div>
           </section>
           <section class="lobby-side">
-            <div class="eyebrow">Quiz w drużynach</div>
+            <div class="eyebrow">Quiz indywidualny</div>
             <h1>${esc(room.title)}</h1>
-            <p class="lead">${N} stwierdzeń. Wspólnie zdecydujcie, które są prawdziwe, a które fałszywe.</p>
-            <h2>Drużyny <span id="team-count" class="count"></span></h2>
-            <ul id="teams" class="team-chips"></ul>
+            <p class="lead">${N} stwierdzeń. Każdy samodzielnie decyduje, które są prawdziwe, a które fałszywe.</p>
+            <h2>Gracze <span id="player-count" class="count"></span></h2>
+            <ul id="players" class="player-chips"></ul>
             <div class="duration" role="group" aria-label="Czas na odpowiedzi">
               <span>Czas na odpowiedzi</span>
               ${[3, 5, 7, 10].map((m) => `<button class="chip" data-min="${m}">${m} min</button>`).join('')}
@@ -105,16 +105,16 @@ const VIEWS = {
       };
     },
     update() {
-      const teams = teamsOf(room);
-      $('#team-count').textContent = teams.length || '';
-      $('#teams').innerHTML = teams.length
-        ? teams.map((t) => `<li class="team-chip">${esc(t.name)}<button class="x" data-id="${esc(t.id)}" title="Usuń drużynę" aria-label="Usuń drużynę ${esc(t.name)}">×</button></li>`).join('')
-        : '<li class="muted">Czekamy na pierwszą drużynę…</li>';
-      $$('#teams .x').forEach((b) => b.onclick = () => {
-        if (confirm('Usunąć tę drużynę z gry?')) set({ ['teams/' + b.dataset.id]: null });
+      const players = playersOf(room);
+      $('#player-count').textContent = players.length || '';
+      $('#players').innerHTML = players.length
+        ? players.map((t) => `<li class="player-chip">${esc(t.name)}<button class="x" data-id="${esc(t.id)}" title="Usuń gracza" aria-label="Usuń gracza ${esc(t.name)}">×</button></li>`).join('')
+        : '<li class="muted">Czekamy na pierwszego gracza…</li>';
+      $$('#players .x').forEach((b) => b.onclick = () => {
+        if (confirm('Usunąć tego gracza z gry?')) set({ ['players/' + b.dataset.id]: null });
       });
       $$('.duration .chip').forEach((b) => b.classList.toggle('on', +b.dataset.min * 60 === (room.duration || DEFAULT_DURATION)));
-      $('#start').disabled = teams.length === 0;
+      $('#start').disabled = players.length === 0;
     },
   },
 
@@ -123,10 +123,10 @@ const VIEWS = {
       closing = false;
       app.innerHTML = `
         <div class="answering">
-          <div class="eyebrow">Drużyny ustalają odpowiedzi</div>
+          <div class="eyebrow">Gracze odpowiadają</div>
           <div id="timer" class="timer mono">0:00</div>
           <div class="timer-bar"><i id="tbar"></i></div>
-          <div id="progress" class="team-progress"></div>
+          <div id="progress" class="player-progress"></div>
           <div class="host-actions">
             <button id="addmin" class="btn ghost">+1 min</button>
             <button id="endnow" class="btn ghost">Zakończ teraz</button>
@@ -140,28 +140,28 @@ const VIEWS = {
       onTick();
     },
     update() {
-      const teams = teamsOf(room);
-      $('#progress').innerHTML = teams.map((t) => {
+      const players = playersOf(room);
+      $('#progress').innerHTML = players.map((t) => {
         const n = answeredCount(t, STATEMENTS);
         return `<div class="tp ${t.submitted ? 'done' : ''}">
           <div class="tp-name">${esc(t.name)}</div>
           <div class="tp-bar"><i style="width:${(n / N) * 100}%"></i></div>
           <div class="tp-status mono">${t.submitted ? '✓ wysłane' : `${n}/${N}`}</div>
         </div>`;
-      }).join('') || '<p class="muted">Brak drużyn</p>';
-      if (teams.length && teams.every((t) => t.submitted)) closeAnswering('all');
+      }).join('') || '<p class="muted">Brak graczy</p>';
+      if (players.length && players.every((t) => t.submitted)) closeAnswering('all');
     },
   },
 
   closed: {
     mount() {
-      const teams = teamsOf(room);
-      const reason = room.closedBy === 'all' ? 'Wszystkie drużyny oddały odpowiedzi' : room.closedBy === 'host' ? 'Zbieranie odpowiedzi zakończone' : 'Czas minął';
+      const players = playersOf(room);
+      const reason = room.closedBy === 'all' ? 'Wszyscy gracze oddali odpowiedzi' : room.closedBy === 'host' ? 'Zbieranie odpowiedzi zakończone' : 'Czas minął';
       app.innerHTML = `
         <div class="center-msg">
           <div class="eyebrow">Koniec odpowiadania</div>
           <h1>${reason}</h1>
-          <ul class="closed-list">${teams.map((t) => `<li><b>${esc(t.name)}</b><span class="mono">${answeredCount(t, STATEMENTS)}/${N} odpowiedzi</span></li>`).join('')}</ul>
+          <ul class="closed-list">${players.map((t) => `<li><b>${esc(t.name)}</b><span class="mono">${answeredCount(t, STATEMENTS)}/${N} odpowiedzi</span></li>`).join('')}</ul>
           <button id="go" class="btn primary big">Odsłaniamy odpowiedzi →</button>
         </div>`;
       $('#go').onclick = () => goTo(0, false);
@@ -174,8 +174,8 @@ const VIEWS = {
       const s = STATEMENTS[i];
       const correct = s.answer;
       const shown = !!room.revealShown;
-      const teams = teamsOf(room);
-      const hits = teams.filter((t) => t.answers[s.id] === correct).length;
+      const players = playersOf(room);
+      const hits = players.filter((t) => t.answers[s.id] === correct).length;
       const last = i === N - 1;
       app.innerHTML = `
         <div class="reveal">
@@ -185,11 +185,11 @@ const VIEWS = {
           </div>
           <blockquote class="statement">${md(s.text)}</blockquote>
           <div class="verdict ${shown ? (correct ? 'is-true' : 'is-false') : 'pending'}">
-            ${shown ? (correct ? 'Prawda' : 'Fałsz') : 'Jak odpowiedziały drużyny?'}
+            ${shown ? (correct ? 'Prawda' : 'Fałsz') : 'Jak odpowiedzieli gracze?'}
           </div>
           ${shown && COMMENTS[s.id] ? `<p class="comment">${md(COMMENTS[s.id])}</p>` : ''}
-          <div class="team-answers">
-            ${teams.map((t) => {
+          <div class="player-answers">
+            ${players.map((t) => {
               const a = t.answers[s.id];
               const ok = a === correct;
               return `<div class="ta ${shown ? (ok ? 'ok' : 'bad') : ''}">
@@ -199,7 +199,7 @@ const VIEWS = {
               </div>`;
             }).join('')}
           </div>
-          ${shown ? `<p class="tally">${hits} z ${teams.length} ${plural(teams.length)} ${hits === 1 ? 'trafiła' : 'trafiło'}</p>` : ''}
+          ${shown ? `<p class="tally">Poprawnie: ${hits} z ${players.length} ${plural(players.length)}</p>` : ''}
           <nav class="reveal-nav">
             <button id="prev" class="btn ghost" ${i === 0 && !shown ? 'disabled' : ''}>←</button>
             <button id="next" class="btn primary">${!shown ? 'Odsłoń odpowiedź' : last ? 'Tablica wyników →' : 'Następne →'}</button>
@@ -213,8 +213,8 @@ const VIEWS = {
 
   leaderboard: {
     mount() {
-      const teams = teamsOf(room);
-      const rows = ranking(teams, ANSWERS);
+      const players = playersOf(room);
+      const rows = ranking(players, ANSWERS);
       const best = Math.max(1, ...rows.map((r) => r.score));
       app.innerHTML = `
         <div class="board">
@@ -235,13 +235,13 @@ const VIEWS = {
             <div class="eyebrow">Wszystkie odpowiedzi</div>
             <div class="matrix-wrap">
               <table class="matrix">
-                <thead><tr><th>#</th><th class="st">Stwierdzenie</th><th>Poprawna</th>${teams.map((t) => `<th class="tn">${esc(t.name)}</th>`).join('')}</tr></thead>
+                <thead><tr><th>#</th><th class="st">Stwierdzenie</th><th>Poprawna</th>${players.map((t) => `<th class="tn">${esc(t.name)}</th>`).join('')}</tr></thead>
                 <tbody>
                   ${STATEMENTS.map((s, k) => `<tr>
                     <td class="mono">${k + 1}</td>
                     <td class="st">${md(s.text)}</td>
                     <td><span class="pill ${s.answer ? 'is-true' : 'is-false'}">${s.answer ? 'P' : 'F'}</span></td>
-                    ${teams.map((t) => {
+                    ${players.map((t) => {
                       const a = t.answers[s.id];
                       const ok = a === s.answer;
                       return `<td class="cell ${ok ? 'ok' : 'bad'}" title="${esc(t.name)}: ${label(a)}">${ok ? '✓' : '✗'}</td>`;
@@ -297,7 +297,7 @@ function goTo(i, shown) {
   if (!REVEAL_IN_TWO_STEPS) shown = true;
   const patch = { phase: 'reveal', revealIndex: i, revealShown: shown };
   // Klucz odpowiedzi trafia do bazy dopiero w momencie odsłonięcia,
-  // więc telefony drużyn nie znają rozwiązań wcześniej.
+  // więc telefony graczy nie znają rozwiązań wcześniej.
   if (shown) patch['key/' + STATEMENTS[i].id] = STATEMENTS[i].answer;
   set(patch);
 }
@@ -330,6 +330,6 @@ async function endSession() {
 }
 
 function plural(n) {
-  if (n === 1) return 'drużyny';
-  return 'drużyn';
+  if (n === 1) return 'gracza';
+  return 'graczy';
 }

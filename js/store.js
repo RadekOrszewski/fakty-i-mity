@@ -91,8 +91,8 @@ async function firebaseStore() {
   ]);
   const app = initializeApp(FIREBASE_CONFIG);
   const auth = A.getAuth(app);
-  // Sesja per karta: odświeżenie strony zachowuje tożsamość drużyny,
-  // a dwie karty w jednej przeglądarce to dwie różne drużyny.
+  // Sesja per karta: odświeżenie strony zachowuje tożsamość gracza,
+  // a dwie karty w jednej przeglądarce to dwóch różnych graczy.
   await A.setPersistence(auth, A.browserSessionPersistence);
   await withTimeout(auth.authStateReady(), 15000, 'auth');
   if (!auth.currentUser) await withTimeout(A.signInAnonymously(auth), 15000, 'logowanie anonimowe');

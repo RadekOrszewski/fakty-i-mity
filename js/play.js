@@ -1,5 +1,5 @@
 import { createStore, isDemo } from './store.js';
-import { $, $$, esc, md, fmt, label, teamsOf, statementsOf, answeredCount, ranking, toast, demoBadge, showFatal, WINNERS_MSG } from './common.js';
+import { $, $$, esc, md, fmt, label, playersOf, statementsOf, answeredCount, ranking, toast, demoBadge, showFatal, WINNERS_MSG } from './common.js';
 
 const app = $('#app');
 const params = new URLSearchParams(location.search);
@@ -16,7 +16,7 @@ async function init() {
     store = await createStore();
     if (isDemo) demoBadge();
     const first = await store.get(code);
-    if (!first) return msg('Nie ma takiego pokoju', `Sprawdźcie kod <b class="mono">${esc(code)}</b> na ekranie prowadzącego.`, true);
+    if (!first) return msg('Nie ma takiego pokoju', `Sprawdź kod <b class="mono">${esc(code)}</b> na ekranie prowadzącego.`, true);
     store.subscribe(code, (r) => { room = r; render(); }, (e) => showFatal(app, e));
     setInterval(onTick, 250);
   } catch (e) {
@@ -32,8 +32,8 @@ const set = (patch) => store.update(code, patch).catch((e) => {
 // ── Render ──────────────────────────────────────────────────
 
 function render() {
-  if (!room) { mounted = null; return msg('Sesja zakończona', 'Dzięki za udział! Możecie zamknąć tę stronę.'); }
-  me = room.teams?.[store.uid] ? { id: store.uid, ...room.teams[store.uid], answers: room.teams[store.uid].answers || {} } : null;
+  if (!room) { mounted = null; return msg('Sesja zakończona', 'Dzięki za udział! Możesz zamknąć tę stronę.'); }
+  me = room.players?.[store.uid] ? { id: store.uid, ...room.players[store.uid], answers: room.players[store.uid].answers || {} } : null;
 
   let view;
   if (!me) view = ['lobby', 'answering'].includes(room.phase) ? 'join' : 'late';
@@ -49,44 +49,44 @@ const VIEWS = {
       app.innerHTML = `
         <div class="phone">
           <div class="eyebrow">${esc(room.title)}</div>
-          <h1>Jak nazywa się Wasza drużyna?</h1>
+          <h1>Jak masz na imię?</h1>
           <form id="join" class="join-form" autocomplete="off">
-            <label for="name" class="sr-only">Nazwa drużyny</label>
-            <input id="name" maxlength="30" placeholder="np. Szybki Przepływ" required>
-            <button class="btn primary big" type="submit">Dołączamy</button>
+            <label for="name" class="sr-only">Imię lub pseudonim</label>
+            <input id="name" maxlength="30" placeholder="np. Ania" required>
+            <button class="btn primary big" type="submit">Dołączam</button>
           </form>
-          <p class="muted small">Jedna osoba z drużyny wpisuje odpowiedzi, reszta doradza.</p>
+          <p class="muted small">Każdy gra na swoim telefonie i odpowiada samodzielnie.</p>
         </div>`;
       $('#name').focus();
       $('#join').onsubmit = async (e) => {
         e.preventDefault();
         const name = $('#name').value.trim().replace(/\s+/g, ' ');
         if (!name) return;
-        const taken = teamsOf(room).some((t) => t.name.toLowerCase() === name.toLowerCase());
-        if (taken) return toast('Ta nazwa jest już zajęta. Wymyślcie inną!');
-        await set({ ['teams/' + store.uid]: { name, joinedAt: now(), submitted: false } });
+        const taken = playersOf(room).some((t) => t.name.toLowerCase() === name.toLowerCase());
+        if (taken) return toast('Ta nazwa jest już zajęta. Wybierz inną!');
+        await set({ ['players/' + store.uid]: { name, joinedAt: now(), submitted: false } });
       };
     },
   },
 
   late: {
-    mount() { msg('Gra już trwa', 'Odpowiedzi zostały zamknięte. Śledźcie wyniki na ekranie prowadzącego.'); },
+    mount() { msg('Gra już trwa', 'Odpowiedzi zostały zamknięte. Śledź wyniki na ekranie prowadzącego.'); },
   },
 
   lobby: {
     mount() {
       app.innerHTML = `
         <div class="phone">
-          <div class="eyebrow">Jesteście w grze</div>
-          <h1 class="team-title">${esc(me.name)}</h1>
+          <div class="eyebrow">Jesteś w grze</div>
+          <h1 class="player-title">${esc(me.name)}</h1>
           <p class="lead">Czekamy, aż prowadzący wystartuje quiz.</p>
           <div class="pulse" aria-hidden="true"></div>
-          <h2 class="small-h">Drużyny w pokoju</h2>
-          <ul id="teams" class="team-chips small"></ul>
+          <h2 class="small-h">Gracze w pokoju</h2>
+          <ul id="players" class="player-chips small"></ul>
         </div>`;
     },
     update() {
-      $('#teams').innerHTML = teamsOf(room).map((t) => `<li class="team-chip ${t.id === me.id ? 'me' : ''}">${esc(t.name)}</li>`).join('');
+      $('#players').innerHTML = playersOf(room).map((t) => `<li class="player-chip ${t.id === me.id ? 'me' : ''}">${esc(t.name)}</li>`).join('');
     },
   },
 
@@ -98,7 +98,7 @@ const VIEWS = {
         <div class="phone answering-phone">
           <header class="sticky">
             <div class="sticky-row">
-              <span class="team-mini">${esc(me.name)}</span>
+              <span class="player-mini">${esc(me.name)}</span>
               <span id="ptimer" class="ptimer mono">0:00</span>
             </div>
             <div class="sticky-row small">
@@ -117,10 +117,10 @@ const VIEWS = {
               </li>`).join('')}
           </ol>
           <div class="submit-bar">
-            <button id="submit" class="btn primary big wide">Wysyłamy odpowiedzi</button>
+            <button id="submit" class="btn primary big wide">Wysyłam odpowiedzi</button>
             <div id="sent" class="sent" hidden>
               <b>✓ Odpowiedzi wysłane</b>
-              <button id="edit" class="btn ghost">Poprawiamy</button>
+              <button id="edit" class="btn ghost">Poprawiam</button>
             </div>
           </div>
         </div>`;
@@ -130,14 +130,14 @@ const VIEWS = {
         const v = b.dataset.v === '1';
         local[id] = v;
         paintCards();
-        set({ [`teams/${store.uid}/answers/${id}`]: v });
+        set({ [`players/${store.uid}/answers/${id}`]: v });
       });
       $('#submit').onclick = () => {
         const missing = st.length - answeredCount({ answers: local }, st);
         if (missing && !confirm(`Brakuje ${missing} odp. Nieoznaczone liczą się jako błędne. Wysłać mimo to?`)) return;
-        set({ [`teams/${store.uid}/submitted`]: true });
+        set({ [`players/${store.uid}/submitted`]: true });
       };
-      $('#edit').onclick = () => set({ [`teams/${store.uid}/submitted`]: false });
+      $('#edit').onclick = () => set({ [`players/${store.uid}/submitted`]: false });
       onTick();
     },
     update() {
@@ -150,7 +150,7 @@ const VIEWS = {
   closed: {
     mount() {
       const st = statementsOf(room);
-      msg('Odpowiedzi zamknięte', `Zaznaczyliście ${answeredCount(me, st)} z ${st.length}. Patrzcie na ekran prowadzącego!`);
+      msg('Odpowiedzi zamknięte', `Zaznaczone odpowiedzi: ${answeredCount(me, st)} z ${st.length}. Patrz na ekran prowadzącego!`);
     },
   },
 
@@ -168,7 +168,7 @@ const VIEWS = {
         <div class="phone">
           <div class="eyebrow">Stwierdzenie ${i + 1} z ${st.length}</div>
           <p class="statement-sm">${md(s.text)}</p>
-          <div class="my-answer">Wasza odpowiedź: <b>${label(mine)}</b></div>
+          <div class="my-answer">Twoja odpowiedź: <b>${label(mine)}</b></div>
           ${shown
             ? `<div class="verdict-sm ${mine === correct ? 'ok' : 'bad'}">${mine === correct ? '✓ Dobrze!' : '✗ Niestety'}</div>
                <p class="muted">Poprawna odpowiedź: <b>${label(correct)}</b></p>`
@@ -181,12 +181,12 @@ const VIEWS = {
   leaderboard: {
     mount() {
       const st = statementsOf(room);
-      const rows = ranking(teamsOf(room), room.key);
+      const rows = ranking(playersOf(room), room.key);
       const mine = rows.find((r) => r.id === me.id);
       app.innerHTML = `
         <div class="phone">
           <div class="eyebrow">Koniec gry</div>
-          <h1 class="team-title">${esc(me.name)}</h1>
+          <h1 class="player-title">${esc(me.name)}</h1>
           <div class="big-place"><span class="mono">${mine.place}.</span> miejsce</div>
           <p class="score-line mono">${mine.score}/${st.length} poprawnych</p>
           <div class="winners">${esc(WINNERS_MSG)}</div>
@@ -235,8 +235,8 @@ function msg(title, body, retry = false) {
 function renderCodeForm() {
   app.innerHTML = `
     <div class="phone center">
-      <div class="eyebrow">Quiz w drużynach</div>
-      <h1>Wpiszcie kod pokoju</h1>
+      <div class="eyebrow">Quiz indywidualny</div>
+      <h1>Wpisz kod pokoju</h1>
       <form id="cf" class="join-form" autocomplete="off">
         <label for="c" class="sr-only">Kod pokoju</label>
         <input id="c" class="mono code-input" maxlength="4" placeholder="ABCD" required>

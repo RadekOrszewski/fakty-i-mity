@@ -5,7 +5,7 @@
 //  answer   – true = prawda, false = fałsz
 //  comment  – (opcjonalnie) krótki komentarz pokazywany po odsłonięciu odpowiedzi
 //
-// Uwaga: ten plik jest publiczny w repozytorium. Strona drużyn go nie wczytuje
+// Uwaga: ten plik jest publiczny w repozytorium. Strona graczy go nie wczytuje
 // (dostaje tylko treść stwierdzeń, bez odpowiedzi), ale ktoś, kto zna adres
 // repo, mógłby go podejrzeć.
 

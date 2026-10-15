@@ -17,8 +17,8 @@ export function fmt(ms) {
 
 export const label = (v) => (v === true ? 'Prawda' : v === false ? 'Fałsz' : '—');
 
-export function teamsOf(room) {
-  return Object.entries(room?.teams || {})
+export function playersOf(room) {
+  return Object.entries(room?.players || {})
     .map(([id, t]) => ({ id, ...t, answers: t.answers || {} }))
     .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
 }
@@ -28,17 +28,17 @@ export function statementsOf(room) {
   return Array.isArray(s) ? s.filter(Boolean) : Object.values(s);
 }
 
-export function answeredCount(team, statements) {
-  return statements.filter((s) => typeof team.answers[s.id] === 'boolean').length;
+export function answeredCount(player, statements) {
+  return statements.filter((s) => typeof player.answers[s.id] === 'boolean').length;
 }
 
-export function scoreOf(team, key) {
-  return Object.entries(key || {}).filter(([sid, v]) => team.answers[sid] === v).length;
+export function scoreOf(player, key) {
+  return Object.entries(key || {}).filter(([sid, v]) => player.answers[sid] === v).length;
 }
 
 // Ranking „sportowy”: remisy dzielą miejsce (1, 1, 3…)
-export function ranking(teams, key) {
-  const rows = teams.map((t) => ({ ...t, score: scoreOf(t, key) })).sort((a, b) => b.score - a.score);
+export function ranking(players, key) {
+  const rows = players.map((t) => ({ ...t, score: scoreOf(t, key) })).sort((a, b) => b.score - a.score);
   rows.forEach((r, i) => { r.place = i > 0 && r.score === rows[i - 1].score ? rows[i - 1].place : i + 1; });
   return rows;
 }
