@@ -4,7 +4,7 @@
 //
 //  1) Tryb DEMO (bez Firebase): zostaw FIREBASE_CONFIG = null.
 //     Wszystko działa w jednej przeglądarce: otwórz index.html
-//     w jednej karcie i play.html w kolejnych (każda karta = gracz).
+//     w jednej karcie i play.html w kolejnych (każda karta = drużyna).
 //
 //  2) Tryb NA ŻYWO: wklej tu obiekt konfiguracyjny z Firebase
 //     (Project settings → General → Your apps → Web app → Config).
@@ -25,9 +25,9 @@ export const FIREBASE_CONFIG = {
 // Domyślny czas na ustalenie odpowiedzi (sekundy). Prowadzący może go zmienić w lobby.
 export const DEFAULT_DURATION = 300;
 
-// true  = przy każdym stwierdzeniu najpierw widać odpowiedzi graczy, a poprawna
+// true  = przy każdym stwierdzeniu najpierw widać odpowiedzi drużyn, a poprawna
 //         odpowiedź pojawia się po kolejnym kliknięciu (miejsce na dyskusję).
-// false = poprawna odpowiedź i wyniki graczy pokazują się od razu.
+// false = poprawna odpowiedź i wyniki drużyn pokazują się od razu.
 export const REVEAL_IN_TWO_STEPS = true;
 
 // Po ilu godzinach stare pokoje są usuwane przy zakładaniu nowego.

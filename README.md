@@ -1,29 +1,29 @@
-# Kanban: fakty i mity — quiz indywidualny
+# Kanban: fakty i mity — quiz drużynowy
 
-Prowadzący wyświetla kod QR, gracze dołączają ze swoich telefonów, każdy samodzielnie klasyfikuje stwierdzenia jako prawda/fałsz na czas, a potem prowadzący odsłania odpowiedzi jedna po drugiej i pokazuje tablicę wyników.
+Narzędzie na szkolenie Flow Manager (KSD). Prowadzący wyświetla kod QR, drużyny dołączają z telefonów, klasyfikują stwierdzenia jako prawda/fałsz na czas, a potem prowadzący odsłania odpowiedzi jedna po drugiej i pokazuje tablicę wyników.
 
 - `index.html` — ekran prowadzącego (rzutnik)
-- `play.html` — ekran gracza (telefon, otwierany z kodu QR)
+- `play.html` — ekran drużyny (telefon, otwierany z kodu QR)
 - `js/statements.js` — treść quizu (podmień, żeby użyć na innym module)
 - `js/config.js` — konfiguracja Firebase i ustawienia
 - `database.rules.json` — reguły bezpieczeństwa bazy
 
-Statyczna strona (GitHub Pages) + Firebase Realtime Database jako tymczasowy „stół do gry”. Żadnych danych osobowych, tylko imiona lub pseudonimy graczy i ich odpowiedzi. Pokój jest usuwany przyciskiem „Zakończ sesję i usuń dane”, a porzucone pokoje starsze niż 24 h znikają automatycznie przy zakładaniu kolejnego.
+Statyczna strona (GitHub Pages) + Firebase Realtime Database jako tymczasowy „stół do gry”. Żadnych danych osobowych, tylko nazwy drużyn i odpowiedzi. Pokój jest usuwany przyciskiem „Zakończ sesję i usuń dane”, a porzucone pokoje starsze niż 24 h znikają automatycznie przy zakładaniu kolejnego.
 
 ## Przebieg gry
 
-1. **Lobby** — QR, adres i kod pokoju. Gracze pojawiają się na liście na żywo (× usuwa omyłkowo dodanego). Wybierasz czas (3/5/7/10 min) i klikasz Start.
-2. **Odpowiadanie** — duży timer i postęp każdego gracza. Odpowiedzi zapisują się od razu po kliknięciu. Faza kończy się, gdy wszyscy gracze klikną „Wysyłam”, gdy minie czas albo po „Zakończ teraz”. Jest też „+1 min”.
-3. **Odsłanianie** — stwierdzenie i odpowiedzi graczy, kolejne kliknięcie odsłania poprawną odpowiedź z ✓/✗. Sterowanie: strzałki ← → lub spacja (działa też z pilotem do prezentacji).
+1. **Lobby** — QR, adres i kod pokoju. Drużyny pojawiają się na liście na żywo (× usuwa omyłkowo dodaną). Wybierasz czas (3/5/7/10 min) i klikasz Start.
+2. **Odpowiadanie** — duży timer i postęp każdej drużyny. Odpowiedzi zapisują się od razu po kliknięciu. Faza kończy się, gdy wszystkie drużyny klikną „Wysyłamy”, gdy minie czas albo po „Zakończ teraz”. Jest też „+1 min”.
+3. **Odsłanianie** — stwierdzenie i odpowiedzi drużyn, kolejne kliknięcie odsłania poprawną odpowiedź z ✓/✗. Sterowanie: strzałki ← → lub spacja (działa też z pilotem do prezentacji).
 4. **Tablica wyników** — ranking (remisy dzielą miejsce), macierz wszystkich odpowiedzi i komunikat dla wszystkich.
 
-Telefony graczy na bieżąco pokazują ich wynik przy każdym stwierdzeniu i miejsce na koniec.
+Telefony drużyn na bieżąco pokazują swój wynik przy każdym stwierdzeniu i miejsce na koniec.
 
 Brak odpowiedzi liczy się jako błędna. Jeśli wolisz odsłaniać od razu w jednym kroku, ustaw `REVEAL_IN_TWO_STEPS = false` w `js/config.js`.
 
 ## Szybki test bez Firebase (tryb demo)
 
-Gdy `FIREBASE_CONFIG = null`, aplikacja działa w trybie demo: wszystko dzieje się w jednej przeglądarce. Otwórz `index.html` w jednej karcie, a link spod kodu QR w kilku kolejnych kartach — każda karta to osobny gracz.
+Gdy `FIREBASE_CONFIG = null`, aplikacja działa w trybie demo: wszystko dzieje się w jednej przeglądarce. Otwórz `index.html` w jednej karcie, a link spod kodu QR w kilku kolejnych kartach — każda karta to osobna drużyna.
 
 Moduły JS nie działają z `file://`, więc potrzebny jest lokalny serwer:
 
@@ -60,15 +60,15 @@ Otwórz stronę prowadzącego na laptopie i zeskanuj QR dwoma telefonami (albo u
 ## Co pilnują reguły bazy
 
 - Tylko prowadzący (anonimowy użytkownik, który założył pokój) zmienia fazę gry i może usunąć pokój.
-- Gracz może zapisywać wyłącznie swoje dane i tylko w lobby oraz w trakcie odliczania (plus 3 s tolerancji). Po czasie zapis jest odrzucany po stronie serwera.
-- Imię gracza: 1–30 znaków, odpowiedzi tylko true/false.
+- Drużyna może zapisywać wyłącznie swoje dane i tylko w lobby oraz w trakcie odliczania (plus 3 s tolerancji). Po czasie zapis jest odrzucany po stronie serwera.
+- Nazwa drużyny: 1–30 znaków, odpowiedzi tylko true/false.
 - Każdy może usunąć pokój starszy niż 24 h — to mechanizm sprzątania.
 
-Poprawne odpowiedzi trafiają do bazy dopiero w momencie odsłonięcia, więc telefon gracza nie zna ich wcześniej. Sam plik `js/statements.js` jest jednak publiczny w repozytorium.
+Poprawne odpowiedzi trafiają do bazy dopiero w momencie odsłonięcia, więc telefon drużyny nie zna ich wcześniej. Sam plik `js/statements.js` jest jednak publiczny w repozytorium.
 
 ## Dobrze wiedzieć
 
-- Odświeżenie strony (prowadzącego lub gracza) wraca do tej samej gry. Zamknięcie karty i otwarcie nowej tworzy nową tożsamość.
-- Jeden gracz = jedno urządzenie.
+- Odświeżenie strony (prowadzącego lub drużyny) wraca do tej samej gry. Zamknięcie karty i otwarcie nowej tworzy nową tożsamość.
+- Jedna drużyna = jedno urządzenie, które wpisuje odpowiedzi.
 - Firebase komunikuje się przez HTTPS/WebSocket na porcie 443, więc działa w typowych sieciach firmowych.
 - Darmowy plan Firebase (100 jednoczesnych połączeń, 1 GB danych) wystarcza z ogromnym zapasem.

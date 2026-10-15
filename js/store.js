@@ -50,7 +50,7 @@ function demoStore() {
     async create(c, data) { localStorage.setItem(P + c, JSON.stringify(data)); emit(c); },
     async update(c, patch) {
       const r = read(c);
-      if (!r) throw new Error('Room does not exist');
+      if (!r) throw new Error('Pokój nie istnieje');
       for (const [p, v] of Object.entries(patch)) setPath(r, p, v);
       localStorage.setItem(P + c, JSON.stringify(r));
       emit(c);
@@ -91,11 +91,11 @@ async function firebaseStore() {
   ]);
   const app = initializeApp(FIREBASE_CONFIG);
   const auth = A.getAuth(app);
-  // Sesja per karta: odświeżenie strony zachowuje tożsamość gracza,
-  // a dwie karty w jednej przeglądarce to dwóch różnych graczy.
+  // Sesja per karta: odświeżenie strony zachowuje tożsamość drużyny,
+  // a dwie karty w jednej przeglądarce to dwie różne drużyny.
   await A.setPersistence(auth, A.browserSessionPersistence);
   await withTimeout(auth.authStateReady(), 15000, 'auth');
-  if (!auth.currentUser) await withTimeout(A.signInAnonymously(auth), 15000, 'anonymous sign-in');
+  if (!auth.currentUser) await withTimeout(A.signInAnonymously(auth), 15000, 'logowanie anonimowe');
 
   const db = D.getDatabase(app);
   let off = 0;
@@ -106,19 +106,19 @@ async function firebaseStore() {
     mode: 'firebase',
     uid: auth.currentUser.uid,
     offset: () => off,
-    async get(c) { return (await withTimeout(D.get(r(c)), 12000, 'database read')).val(); },
-    create: (c, d) => withTimeout(D.set(r(c), d), 12000, 'database write'),
+    async get(c) { return (await withTimeout(D.get(r(c)), 12000, 'odczyt z bazy')).val(); },
+    create: (c, d) => withTimeout(D.set(r(c), d), 12000, 'zapis do bazy'),
     update: (c, p) => D.update(r(c), p),
     remove: (c) => D.remove(r(c)),
     subscribe(c, f, onErr) { return D.onValue(r(c), (s) => f(s.val()), (e) => onErr?.(e)); },
     async cleanup(ttl) {
       try {
         const q = D.query(D.ref(db, 'rooms'), D.orderByChild('createdAt'), D.endAt(Date.now() + off - ttl));
-        const snap = await withTimeout(D.get(q), 8000, 'cleanup');
+        const snap = await withTimeout(D.get(q), 8000, 'sprzątanie');
         const jobs = [];
         snap.forEach((ch) => { jobs.push(D.remove(ch.ref)); });
         await Promise.allSettled(jobs);
-      } catch (e) { console.warn('Cleaning up old rooms failed', e); }
+      } catch (e) { console.warn('Sprzątanie starych pokojów nie powiodło się', e); }
     },
   };
 }

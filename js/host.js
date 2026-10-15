@@ -1,7 +1,7 @@
 import { createStore, isDemo } from './store.js';
 import { STATEMENTS, QUIZ_TITLE } from './statements.js';
 import { DEFAULT_DURATION, REVEAL_IN_TWO_STEPS, ROOM_TTL_HOURS } from './config.js';
-import { $, $$, esc, md, fmt, label, playersOf, answeredCount, ranking, toast, demoBadge, showFatal, WINNERS_MSG } from './common.js';
+import { $, $$, esc, md, fmt, label, teamsOf, answeredCount, ranking, toast, demoBadge, showFatal, WINNERS_MSG } from './common.js';
 
 const app = $('#app');
 const ANSWERS = Object.fromEntries(STATEMENTS.map((s) => [s.id, s.answer]));
@@ -49,7 +49,7 @@ async function newRoom() {
   return c;
 }
 
-const set = (patch) => store.update(code, patch).catch((e) => { console.error(e); toast('Could not save the change'); });
+const set = (patch) => store.update(code, patch).catch((e) => { console.error(e); toast('Nie udało się zapisać zmiany'); });
 
 function playUrl() {
   const u = new URL('play.html', location.href);
@@ -75,19 +75,19 @@ const VIEWS = {
       app.innerHTML = `
         <div class="lobby">
           <section class="join-card">
-            <div class="eyebrow">Scan the code</div>
+            <div class="eyebrow">Zeskanujcie kod</div>
             <div id="qr" class="qr" aria-label="Kod QR do strony quizu"></div>
-            <div class="join-alt">or go to<br><a class="mono" href="${esc(url)}" target="_blank" rel="noopener">${esc(url.replace(/^https?:\/\//, ''))}</a></div>
-            <div class="room-code"><span>room code</span><b class="mono">${code}</b></div>
+            <div class="join-alt">lub wejdźcie na<br><a class="mono" href="${esc(url)}" target="_blank" rel="noopener">${esc(url.replace(/^https?:\/\//, ''))}</a></div>
+            <div class="room-code"><span>kod pokoju</span><b class="mono">${code}</b></div>
           </section>
           <section class="lobby-side">
-            <div class="eyebrow">Individual quiz</div>
+            <div class="eyebrow">Quiz w drużynach</div>
             <h1>${esc(room.title)}</h1>
-            <p class="lead">${N} statements. Decide on your own which are true and which are false.</p>
-            <h2>Players <span id="player-count" class="count"></span></h2>
-            <ul id="players" class="player-chips"></ul>
-            <div class="duration" role="group" aria-label="Time to answer">
-              <span>Time to answer</span>
+            <p class="lead">${N} stwierdzeń. Wspólnie zdecydujcie, które są prawdziwe, a które fałszywe.</p>
+            <h2>Drużyny <span id="team-count" class="count"></span></h2>
+            <ul id="teams" class="team-chips"></ul>
+            <div class="duration" role="group" aria-label="Czas na odpowiedzi">
+              <span>Czas na odpowiedzi</span>
               ${[3, 5, 7, 10].map((m) => `<button class="chip" data-min="${m}">${m} min</button>`).join('')}
             </div>
             <button id="start" class="btn primary big">Start</button>
@@ -96,7 +96,7 @@ const VIEWS = {
       if (window.QRCode) {
         new QRCode($('#qr'), { text: url, width: 320, height: 320, colorDark: '#13204a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
       } else {
-        $('#qr').innerHTML = '<p class="muted">Could not load the QR generator. Give participants the address below.</p>';
+        $('#qr').innerHTML = '<p class="muted">Nie udało się wczytać generatora QR. Podaj uczestnikom adres poniżej.</p>';
       }
       $$('.duration .chip').forEach((b) => b.onclick = () => set({ duration: +b.dataset.min * 60 }));
       $('#start').onclick = () => {
@@ -105,16 +105,16 @@ const VIEWS = {
       };
     },
     update() {
-      const players = playersOf(room);
-      $('#player-count').textContent = players.length || '';
-      $('#players').innerHTML = players.length
-        ? players.map((t) => `<li class="player-chip">${esc(t.name)}<button class="x" data-id="${esc(t.id)}" title="Remove player" aria-label="Remove player ${esc(t.name)}">×</button></li>`).join('')
-        : '<li class="muted">Waiting for the first player…</li>';
-      $$('#players .x').forEach((b) => b.onclick = () => {
-        if (confirm('Remove this player from the game?')) set({ ['players/' + b.dataset.id]: null });
+      const teams = teamsOf(room);
+      $('#team-count').textContent = teams.length || '';
+      $('#teams').innerHTML = teams.length
+        ? teams.map((t) => `<li class="team-chip">${esc(t.name)}<button class="x" data-id="${esc(t.id)}" title="Usuń drużynę" aria-label="Usuń drużynę ${esc(t.name)}">×</button></li>`).join('')
+        : '<li class="muted">Czekamy na pierwszą drużynę…</li>';
+      $$('#teams .x').forEach((b) => b.onclick = () => {
+        if (confirm('Usunąć tę drużynę z gry?')) set({ ['teams/' + b.dataset.id]: null });
       });
       $$('.duration .chip').forEach((b) => b.classList.toggle('on', +b.dataset.min * 60 === (room.duration || DEFAULT_DURATION)));
-      $('#start').disabled = players.length === 0;
+      $('#start').disabled = teams.length === 0;
     },
   },
 
@@ -123,46 +123,46 @@ const VIEWS = {
       closing = false;
       app.innerHTML = `
         <div class="answering">
-          <div class="eyebrow">Players are answering</div>
+          <div class="eyebrow">Drużyny ustalają odpowiedzi</div>
           <div id="timer" class="timer mono">0:00</div>
           <div class="timer-bar"><i id="tbar"></i></div>
-          <div id="progress" class="player-progress"></div>
+          <div id="progress" class="team-progress"></div>
           <div class="host-actions">
             <button id="addmin" class="btn ghost">+1 min</button>
-            <button id="endnow" class="btn ghost">End now</button>
+            <button id="endnow" class="btn ghost">Zakończ teraz</button>
           </div>
         </div>`;
       $('#addmin').onclick = () => set({
         phaseEndsAt: Math.max(room.phaseEndsAt, now()) + 60e3,
         phaseTotal: (room.phaseTotal || 0) + 60e3,
       });
-      $('#endnow').onclick = () => { if (confirm('Stop collecting answers?')) closeAnswering('host'); };
+      $('#endnow').onclick = () => { if (confirm('Zakończyć zbieranie odpowiedzi?')) closeAnswering('host'); };
       onTick();
     },
     update() {
-      const players = playersOf(room);
-      $('#progress').innerHTML = players.map((t) => {
+      const teams = teamsOf(room);
+      $('#progress').innerHTML = teams.map((t) => {
         const n = answeredCount(t, STATEMENTS);
         return `<div class="tp ${t.submitted ? 'done' : ''}">
           <div class="tp-name">${esc(t.name)}</div>
           <div class="tp-bar"><i style="width:${(n / N) * 100}%"></i></div>
-          <div class="tp-status mono">${t.submitted ? '✓ submitted' : `${n}/${N}`}</div>
+          <div class="tp-status mono">${t.submitted ? '✓ wysłane' : `${n}/${N}`}</div>
         </div>`;
-      }).join('') || '<p class="muted">No players</p>';
-      if (players.length && players.every((t) => t.submitted)) closeAnswering('all');
+      }).join('') || '<p class="muted">Brak drużyn</p>';
+      if (teams.length && teams.every((t) => t.submitted)) closeAnswering('all');
     },
   },
 
   closed: {
     mount() {
-      const players = playersOf(room);
-      const reason = room.closedBy === 'all' ? 'All players have submitted' : room.closedBy === 'host' ? 'Answer collection closed' : 'Time is up';
+      const teams = teamsOf(room);
+      const reason = room.closedBy === 'all' ? 'Wszystkie drużyny oddały odpowiedzi' : room.closedBy === 'host' ? 'Zbieranie odpowiedzi zakończone' : 'Czas minął';
       app.innerHTML = `
         <div class="center-msg">
-          <div class="eyebrow">Answering closed</div>
+          <div class="eyebrow">Koniec odpowiadania</div>
           <h1>${reason}</h1>
-          <ul class="closed-list">${players.map((t) => `<li><b>${esc(t.name)}</b><span class="mono">${answeredCount(t, STATEMENTS)}/${N} answered</span></li>`).join('')}</ul>
-          <button id="go" class="btn primary big">Reveal the answers →</button>
+          <ul class="closed-list">${teams.map((t) => `<li><b>${esc(t.name)}</b><span class="mono">${answeredCount(t, STATEMENTS)}/${N} odpowiedzi</span></li>`).join('')}</ul>
+          <button id="go" class="btn primary big">Odsłaniamy odpowiedzi →</button>
         </div>`;
       $('#go').onclick = () => goTo(0, false);
     },
@@ -174,37 +174,37 @@ const VIEWS = {
       const s = STATEMENTS[i];
       const correct = s.answer;
       const shown = !!room.revealShown;
-      const players = playersOf(room);
-      const hits = players.filter((t) => t.answers[s.id] === correct).length;
+      const teams = teamsOf(room);
+      const hits = teams.filter((t) => t.answers[s.id] === correct).length;
       const last = i === N - 1;
       app.innerHTML = `
         <div class="reveal">
           <div class="reveal-top">
-            <span class="eyebrow">Statement ${i + 1} of ${N}</span>
+            <span class="eyebrow">Stwierdzenie ${i + 1} z ${N}</span>
             <div class="dots">${STATEMENTS.map((_, k) => `<i class="${k < i ? 'past' : k === i ? 'now' : ''}"></i>`).join('')}</div>
           </div>
           <blockquote class="statement">${md(s.text)}</blockquote>
           <div class="verdict ${shown ? (correct ? 'is-true' : 'is-false') : 'pending'}">
-            ${shown ? (correct ? 'True' : 'False') : 'How did the players answer?'}
+            ${shown ? (correct ? 'Prawda' : 'Fałsz') : 'Jak odpowiedziały drużyny?'}
           </div>
           ${shown && COMMENTS[s.id] ? `<p class="comment">${md(COMMENTS[s.id])}</p>` : ''}
-          <div class="player-answers">
-            ${players.map((t) => {
+          <div class="team-answers">
+            ${teams.map((t) => {
               const a = t.answers[s.id];
               const ok = a === correct;
               return `<div class="ta ${shown ? (ok ? 'ok' : 'bad') : ''}">
                 <div class="ta-name">${esc(t.name)}</div>
                 <div class="ta-ans">${label(a)}</div>
-                ${shown ? `<div class="ta-mark" aria-label="${ok ? 'correct' : 'wrong'}">${ok ? '✓' : '✗'}</div>` : ''}
+                ${shown ? `<div class="ta-mark" aria-label="${ok ? 'dobrze' : 'źle'}">${ok ? '✓' : '✗'}</div>` : ''}
               </div>`;
             }).join('')}
           </div>
-          ${shown ? `<p class="tally">Correct: ${hits} of ${players.length} ${plural(players.length)}</p>` : ''}
+          ${shown ? `<p class="tally">${hits} z ${teams.length} ${plural(teams.length)} ${hits === 1 ? 'trafiła' : 'trafiło'}</p>` : ''}
           <nav class="reveal-nav">
             <button id="prev" class="btn ghost" ${i === 0 && !shown ? 'disabled' : ''}>←</button>
-            <button id="next" class="btn primary">${!shown ? 'Reveal answer' : last ? 'Leaderboard →' : 'Next →'}</button>
+            <button id="next" class="btn primary">${!shown ? 'Odsłoń odpowiedź' : last ? 'Tablica wyników →' : 'Następne →'}</button>
           </nav>
-          <p class="hint">Arrow keys ← → or space</p>
+          <p class="hint">Strzałki ← → lub spacja</p>
         </div>`;
       $('#prev').onclick = back;
       $('#next').onclick = forward;
@@ -213,13 +213,13 @@ const VIEWS = {
 
   leaderboard: {
     mount() {
-      const players = playersOf(room);
-      const rows = ranking(players, ANSWERS);
+      const teams = teamsOf(room);
+      const rows = ranking(teams, ANSWERS);
       const best = Math.max(1, ...rows.map((r) => r.score));
       app.innerHTML = `
         <div class="board">
           <section class="board-rank">
-            <div class="eyebrow">Leaderboard</div>
+            <div class="eyebrow">Tablica wyników</div>
             <ol class="ranking">
               ${rows.map((r) => `
                 <li class="${r.place === 1 ? 'first' : ''}">
@@ -232,16 +232,16 @@ const VIEWS = {
             <div class="winners">${esc(WINNERS_MSG)}</div>
           </section>
           <section class="board-matrix">
-            <div class="eyebrow">All answers</div>
+            <div class="eyebrow">Wszystkie odpowiedzi</div>
             <div class="matrix-wrap">
               <table class="matrix">
-                <thead><tr><th>#</th><th class="st">Statement</th><th>Correct</th>${players.map((t) => `<th class="tn">${esc(t.name)}</th>`).join('')}</tr></thead>
+                <thead><tr><th>#</th><th class="st">Stwierdzenie</th><th>Poprawna</th>${teams.map((t) => `<th class="tn">${esc(t.name)}</th>`).join('')}</tr></thead>
                 <tbody>
                   ${STATEMENTS.map((s, k) => `<tr>
                     <td class="mono">${k + 1}</td>
                     <td class="st">${md(s.text)}</td>
-                    <td><span class="pill ${s.answer ? 'is-true' : 'is-false'}">${s.answer ? 'T' : 'F'}</span></td>
-                    ${players.map((t) => {
+                    <td><span class="pill ${s.answer ? 'is-true' : 'is-false'}">${s.answer ? 'P' : 'F'}</span></td>
+                    ${teams.map((t) => {
                       const a = t.answers[s.id];
                       const ok = a === s.answer;
                       return `<td class="cell ${ok ? 'ok' : 'bad'}" title="${esc(t.name)}: ${label(a)}">${ok ? '✓' : '✗'}</td>`;
@@ -252,8 +252,8 @@ const VIEWS = {
             </div>
           </section>
           <nav class="board-nav">
-            <button id="back" class="btn ghost">← Back to answers</button>
-            <button id="end" class="btn danger">End session and delete data</button>
+            <button id="back" class="btn ghost">← Wróć do odpowiedzi</button>
+            <button id="end" class="btn danger">Zakończ sesję i usuń dane</button>
           </nav>
         </div>`;
       $('#back').onclick = () => goTo(N - 1, true);
@@ -265,10 +265,10 @@ const VIEWS = {
 function renderEnded() {
   app.innerHTML = `
     <div class="center-msg">
-      <div class="eyebrow">Session ended</div>
-      <h1>Data has been deleted</h1>
-      <p class="lead">The results of this game are no longer stored anywhere.</p>
-      <button id="again" class="btn primary big">New game</button>
+      <div class="eyebrow">Sesja zakończona</div>
+      <h1>Dane zostały usunięte</h1>
+      <p class="lead">Wyniki tej gry nie są już nigdzie przechowywane.</p>
+      <button id="again" class="btn primary big">Nowa gra</button>
     </div>`;
   $('#again').onclick = () => { sessionStorage.removeItem('ksdquiz:hostRoom'); location.reload(); };
 }
@@ -297,7 +297,7 @@ function goTo(i, shown) {
   if (!REVEAL_IN_TWO_STEPS) shown = true;
   const patch = { phase: 'reveal', revealIndex: i, revealShown: shown };
   // Klucz odpowiedzi trafia do bazy dopiero w momencie odsłonięcia,
-  // więc telefony graczy nie znają rozwiązań wcześniej.
+  // więc telefony drużyn nie znają rozwiązań wcześniej.
   if (shown) patch['key/' + STATEMENTS[i].id] = STATEMENTS[i].answer;
   set(patch);
 }
@@ -324,11 +324,12 @@ function onKey(e) {
 }
 
 async function endSession() {
-  if (!confirm('End the session? All answers will be permanently deleted.')) return;
+  if (!confirm('Zakończyć sesję? Wszystkie odpowiedzi zostaną trwale usunięte.')) return;
   await store.remove(code);
   sessionStorage.removeItem('ksdquiz:hostRoom');
 }
 
 function plural(n) {
-  return n === 1 ? 'player' : 'players';
+  if (n === 1) return 'drużyny';
+  return 'drużyn';
 }

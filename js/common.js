@@ -15,10 +15,10 @@ export function fmt(ms) {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
 
-export const label = (v) => (v === true ? 'True' : v === false ? 'False' : '—');
+export const label = (v) => (v === true ? 'Prawda' : v === false ? 'Fałsz' : '—');
 
-export function playersOf(room) {
-  return Object.entries(room?.players || {})
+export function teamsOf(room) {
+  return Object.entries(room?.teams || {})
     .map(([id, t]) => ({ id, ...t, answers: t.answers || {} }))
     .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
 }
@@ -28,17 +28,17 @@ export function statementsOf(room) {
   return Array.isArray(s) ? s.filter(Boolean) : Object.values(s);
 }
 
-export function answeredCount(player, statements) {
-  return statements.filter((s) => typeof player.answers[s.id] === 'boolean').length;
+export function answeredCount(team, statements) {
+  return statements.filter((s) => typeof team.answers[s.id] === 'boolean').length;
 }
 
-export function scoreOf(player, key) {
-  return Object.entries(key || {}).filter(([sid, v]) => player.answers[sid] === v).length;
+export function scoreOf(team, key) {
+  return Object.entries(key || {}).filter(([sid, v]) => team.answers[sid] === v).length;
 }
 
 // Ranking „sportowy”: remisy dzielą miejsce (1, 1, 3…)
-export function ranking(players, key) {
-  const rows = players.map((t) => ({ ...t, score: scoreOf(t, key) })).sort((a, b) => b.score - a.score);
+export function ranking(teams, key) {
+  const rows = teams.map((t) => ({ ...t, score: scoreOf(t, key) })).sort((a, b) => b.score - a.score);
   rows.forEach((r, i) => { r.place = i > 0 && r.score === rows[i - 1].score ? rows[i - 1].place : i + 1; });
   return rows;
 }
@@ -55,7 +55,7 @@ export function toast(msg) {
 export function demoBadge() {
   const b = document.createElement('div');
   b.className = 'demo-badge';
-  b.innerHTML = '<b>Demo mode</b><span> · data stays in this browser only</span>';
+  b.innerHTML = '<b>Tryb demo</b><span> · dane tylko w tej przeglądarce</span>';
   (document.querySelector('.brand-bar') || document.body).append(b);
 }
 
@@ -63,19 +63,19 @@ export function demoBadge() {
 export function explainError(e) {
   const raw = String(e?.code || '') + ' ' + String(e?.message || e || '');
   const r = raw.toLowerCase();
-  let hint = 'Unknown error. Open the browser console (F12 → Console) for details.';
+  let hint = 'Nieznany błąd. Otwórz konsolę przeglądarki (F12 → Console), tam są szczegóły.';
   if (r.includes('permission_denied') || r.includes('permission denied'))
-    hint = 'The database is denying access. In Firebase: Realtime Database → Rules → paste the full contents of database.rules.json and click Publish.';
+    hint = 'Baza odrzuca dostęp. W Firebase: Realtime Database → Rules → wklej całą zawartość pliku database.rules.json i kliknij Publish.';
   else if (r.includes('admin-restricted-operation') || r.includes('operation-not-allowed'))
-    hint = 'Anonymous sign-in is disabled. In Firebase: Authentication → Sign-in method → Anonymous → Enable.';
+    hint = 'Logowanie anonimowe jest wyłączone. W Firebase: Authentication → Sign-in method → Anonymous → Enable.';
   else if (r.includes('unauthorized-domain') || r.includes('requests-from-referer'))
-    hint = 'This domain is not allowed. In Firebase: Authentication → Settings → Authorized domains → add radekorszewski.github.io (no https, no path).';
+    hint = 'Domena strony nie jest dozwolona. W Firebase: Authentication → Settings → Authorized domains → dodaj radekorszewski.github.io (bez https i bez ścieżki).';
   else if (r.includes('api-key-not-valid') || r.includes('invalid-api-key'))
-    hint = 'Invalid apiKey in js/config.js. Copy the config again from Project settings.';
+    hint = 'Nieprawidłowy apiKey w js/config.js. Skopiuj konfigurację ponownie z Project settings.';
   else if (r.includes('timeout'))
-    hint = 'No response from the database. Check that databaseURL in js/config.js exactly matches the address shown on the Realtime Database screen, and that the database has been created.';
+    hint = 'Brak odpowiedzi z bazy. Sprawdź, czy databaseURL w js/config.js jest dokładnie taki jak adres na ekranie Realtime Database, i czy baza została utworzona.';
   else if (r.includes('failed to fetch') || r.includes('importing a module') || r.includes('network'))
-    hint = 'Could not load the Firebase libraries. Check your internet connection or content blockers.';
+    hint = 'Nie udało się pobrać bibliotek Firebase. Sprawdź połączenie z internetem lub blokery treści.';
   return { hint, raw: raw.trim() };
 }
 
@@ -83,12 +83,12 @@ export function showFatal(el, e) {
   console.error(e);
   const { hint, raw } = explainError(e);
   el.innerHTML = `<div class="center-msg fatal">
-    <div class="eyebrow">Connection problem</div>
-    <h1>Could not set up the game</h1>
+    <div class="eyebrow">Problem z połączeniem</div>
+    <h1>Nie udało się przygotować gry</h1>
     <p class="lead">${esc(hint)}</p>
     <p class="muted small mono">${esc(raw)}</p>
-    <button class="btn ghost" onclick="location.reload()">Try again</button>
+    <button class="btn ghost" onclick="location.reload()">Spróbuj ponownie</button>
   </div>`;
 }
 
-export const WINNERS_MSG = 'You are all winners, because you all learned something!';
+export const WINNERS_MSG = 'Wszyscy jesteście zwycięzcami, bo czegoś się nauczyliście!';
