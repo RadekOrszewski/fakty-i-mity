@@ -199,7 +199,7 @@ const VIEWS = {
               </div>`;
             }).join('')}
           </div>
-          ${shown ? `<p class="tally">${hits} z ${teams.length} ${plural(teams.length)} ${hits === 1 ? 'trafiła' : 'trafiło'}</p>` : ''}
+          ${shown ? `<p class="tally">${hits} z ${teams.length} ${plural(teams.length)} ${hits === 1 ? 'udzieliła' : 'udzieliło'} poprawnej odpowiedzi</p>` : ''}
           <nav class="reveal-nav">
             <button id="prev" class="btn ghost" ${i === 0 && !shown ? 'disabled' : ''}>←</button>
             <button id="next" class="btn primary">${!shown ? 'Odsłoń odpowiedź' : last ? 'Tablica wyników →' : 'Następne →'}</button>
